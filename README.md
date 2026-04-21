@@ -1,108 +1,71 @@
-# Temporal Explainable GNN Environment Setup
+# Temporal Explainable GNN for Real-Time Intrusion Detection
 
-This project is configured for:
-- PyTorch + CUDA acceleration
-- PyTorch Geometric (PyG)
-- Large graph processing workflows
+This repository now includes a reproducible training/evaluation CLI for paper-ready experiments.
+
+## What Was Added for IEEE Readiness
+
+- Reproducible runner: `training/run_training.py`
+- Config file: `config.yml`
+- Leakage guard: edge feature transforms are fitted on **train only** and applied to val/test
+- Explicit split policy (default): `per_day_temporal` (strict temporal-style split)
+- Baseline comparison output (RF, LR, MLP + GNN variants)
+- Ablation output (`TemporalGNN_LSTM` vs `TemporalGNN_NoTemporal`)
+- Multi-seed significance report support
 
 ## Project Structure
 
 ```text
 project_root/
-|-- venv/
+|-- config.yml
 |-- data/
+|-- evaluation/
+|-- models/
 |-- notebooks/
-|-- src/
+|-- training/
+|   |-- __init__.py
+|   |-- pipeline_core.py
+|   |-- run_training.py
 |-- requirements.txt
 |-- README.md
 ```
 
 ## Environment Setup
 
-### 1) Create virtual environment
-
-Recommended interpreter: Python 3.10.
-
-If Python 3.10 is installed:
-
-```powershell
-py -3.10 -m venv venv
-```
-
-Current workspace setup used Python 3.11 (3.10 not present on this machine):
-
 ```powershell
 py -3.11 -m venv venv
-```
-
-### 2) Activate environment
-
-Windows (PowerShell):
-
-```powershell
 .\venv\Scripts\Activate.ps1
-```
-
-Windows (CMD):
-
-```cmd
-venv\Scripts\activate
-```
-
-Linux/Mac:
-
-```bash
-source venv/bin/activate
-```
-
-### 3) Upgrade pip
-
-```powershell
 python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-## Core Dependencies
+## Run Reproducible Training
 
-### PyTorch (CUDA 11.8)
+From repository root:
 
 ```powershell
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+python -m training.run_training --config config.yml
 ```
 
-### PyTorch Geometric
-
-Install binary extensions matching your installed torch/cuda wheel.
-
-For torch 2.7 + cu118:
+Quick smoke test:
 
 ```powershell
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv -f https://data.pyg.org/whl/torch-2.7.0+cu118.html
-pip install torch-geometric
+python -m training.run_training --config config.yml --fast-smoke
 ```
 
-### Additional libraries
+## Key Output Artifacts
 
-```powershell
-pip install pandas scikit-learn matplotlib seaborn networkx tqdm jupyter ipykernel
-```
+After a run, the following are generated in `evaluation/`:
 
-## Jupyter Kernel
+- `model_comparison.csv`
+- `ablation_results.csv`
+- `seed_metrics.csv`
+- `significance_report.csv`
+- `run_manifest.json`
 
-```powershell
-python -m ipykernel install --user --name gnn-env
-```
+Model checkpoints are written to `models/` (for example `temporal_gnn_lstm_seed42.pt`).
 
-## Verify GPU Support
+## Publication Notes
 
-```python
-import torch
-print(torch.cuda.is_available())
-print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "NO_CUDA_DEVICE")
-```
-
-Expected `torch.cuda.is_available()` output: `True`.
-
-## Reproducibility
-
-Installed dependencies were exported to:
-- `requirements.txt`
+- For strict real-time claims, use `split_mode: per_day_temporal` or `chronological`.
+- `stratified_snapshot` is available for analysis but is not strict temporal deployment.
+- Significance testing is based on paired tests across seeds in `significance_report.csv`.
