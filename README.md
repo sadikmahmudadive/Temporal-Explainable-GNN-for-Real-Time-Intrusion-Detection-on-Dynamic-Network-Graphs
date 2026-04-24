@@ -52,6 +52,36 @@ Quick smoke test:
 python -m training.run_training --config config.yml --fast-smoke
 ```
 
+This training run also generates `evaluation/deployment_artifacts.json`, which is required for realtime inference.
+
+## Run Realtime Detection
+
+Tail an appending flow CSV stream and emit snapshot-level alerts:
+
+```powershell
+python -m training.realtime_detect --deployment evaluation/deployment_artifacts.json --input-csv data/live_flows.csv
+```
+
+Optional useful flags:
+
+```powershell
+python -m training.realtime_detect --deployment evaluation/deployment_artifacts.json --input-csv data/live_flows.csv --poll-seconds 1 --max-rows-per-read 2000 --output-csv evaluation/realtime_alerts.csv
+```
+
+## Single-File GUI App
+
+Run one GUI that controls both training and realtime detection:
+
+```powershell
+python temporal_gnn_gui_app.py
+```
+
+The GUI includes:
+- Embedded editable config (replaces manual `config.yml` editing)
+- Training start/stop controls
+- Realtime detection start/stop controls
+- Live process logs
+
 ## Key Output Artifacts
 
 After a run, the following are generated in `evaluation/`:
@@ -61,6 +91,7 @@ After a run, the following are generated in `evaluation/`:
 - `seed_metrics.csv`
 - `significance_report.csv`
 - `run_manifest.json`
+- `deployment_artifacts.json`
 
 Model checkpoints are written to `models/` (for example `temporal_gnn_lstm_seed42.pt`).
 

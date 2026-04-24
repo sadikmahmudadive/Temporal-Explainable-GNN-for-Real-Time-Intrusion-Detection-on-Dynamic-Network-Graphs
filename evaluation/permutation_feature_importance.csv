@@ -1,0 +1,8 @@
+feature,importance
+Total Length of Bwd Packets,0.10192431045542016
+Total Length of Fwd Packets,0.050160359204618366
+Total Fwd Packets,0.025849903784477248
+Total Backward Packets,0.02116741500962156
+Flow Bytes/s,-0.0020525978191147987
+Flow Packets/s,-0.011994868505452172
+Flow Duration,-0.013021167415009582
