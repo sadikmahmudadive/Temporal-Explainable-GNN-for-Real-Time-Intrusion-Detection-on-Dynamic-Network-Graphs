@@ -1,0 +1,6 @@
+shap>=0.41.0
+lime>=0.2.0.1
+scikit-learn
+
+# Install with:
+# pip install -r requirements-xia.txt
