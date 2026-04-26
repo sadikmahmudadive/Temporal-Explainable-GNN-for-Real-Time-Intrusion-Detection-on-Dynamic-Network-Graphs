@@ -1,0 +1,54 @@
+Requirement already satisfied: shap in .\venv\Lib\site-packages (0.51.0)
+Collecting lime
+  Downloading lime-0.2.0.1.tar.gz (275 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: scikit-learn in .\venv\Lib\site-packages (1.8.0)
+Requirement already satisfied: numpy>=2 in .\venv\Lib\site-packages (from shap) (2.4.3)
+Requirement already satisfied: scipy in .\venv\Lib\site-packages (from shap) (1.17.1)
+Requirement already satisfied: pandas in .\venv\Lib\site-packages (from shap) (3.0.2)
+Requirement already satisfied: tqdm>=4.27.0 in .\venv\Lib\site-packages (from shap) (4.67.3)
+Requirement already satisfied: packaging>20.9 in .\venv\Lib\site-packages (from shap) (26.1)
+Requirement already satisfied: slicer==0.0.8 in .\venv\Lib\site-packages (from shap) (0.0.8)
+Requirement already satisfied: numba in .\venv\Lib\site-packages (from shap) (0.65.0)
+Requirement already satisfied: llvmlite in .\venv\Lib\site-packages (from shap) (0.47.0)
+Requirement already satisfied: cloudpickle in .\venv\Lib\site-packages (from shap) (3.1.2)
+Requirement already satisfied: typing-extensions in .\venv\Lib\site-packages (from shap) (4.15.0)
+Requirement already satisfied: matplotlib in .\venv\Lib\site-packages (from lime) (3.10.8)
+Collecting scikit-image>=0.12 (from lime)
+  Downloading scikit_image-0.26.0-cp311-cp311-win_amd64.whl.metadata (15 kB)
+Requirement already satisfied: joblib>=1.3.0 in .\venv\Lib\site-packages (from scikit-learn) (1.5.3)
+Requirement already satisfied: threadpoolctl>=3.2.0 in .\venv\Lib\site-packages (from scikit-learn) (3.6.0)
+Requirement already satisfied: networkx>=3.0 in .\venv\Lib\site-packages (from scikit-image>=0.12->lime) (3.6.1)
+Requirement already satisfied: pillow>=10.1 in .\venv\Lib\site-packages (from scikit-image>=0.12->lime) (12.1.1)
+Requirement already satisfied: imageio!=2.35.0,>=2.33 in .\venv\Lib\site-packages (from scikit-image>=0.12->lime) (2.37.3)
+Collecting tifffile>=2022.8.12 (from scikit-image>=0.12->lime)
+  Downloading tifffile-2026.3.3-py3-none-any.whl.metadata (31 kB)
+Collecting lazy-loader>=0.4 (from scikit-image>=0.12->lime)
+  Downloading lazy_loader-0.5-py3-none-any.whl.metadata (5.9 kB)
+Requirement already satisfied: colorama in .\venv\Lib\site-packages (from tqdm>=4.27.0->shap) (0.4.6)
+Requirement already satisfied: contourpy>=1.0.1 in .\venv\Lib\site-packages (from matplotlib->lime) (1.3.3)
+Requirement already satisfied: cycler>=0.10 in .\venv\Lib\site-packages (from matplotlib->lime) (0.12.1)
+Requirement already satisfied: fonttools>=4.22.0 in .\venv\Lib\site-packages (from matplotlib->lime) (4.62.1)
+Requirement already satisfied: kiwisolver>=1.3.1 in .\venv\Lib\site-packages (from matplotlib->lime) (1.5.0)
+Requirement already satisfied: pyparsing>=3 in .\venv\Lib\site-packages (from matplotlib->lime) (3.3.2)
+Requirement already satisfied: python-dateutil>=2.7 in .\venv\Lib\site-packages (from matplotlib->lime) (2.9.0.post0)
+Requirement already satisfied: six>=1.5 in .\venv\Lib\site-packages (from python-dateutil>=2.7->matplotlib->lime) (1.17.0)
+Requirement already satisfied: tzdata in .\venv\Lib\site-packages (from pandas->shap) (2026.1)
+Downloading scikit_image-0.26.0-cp311-cp311-win_amd64.whl (11.9 MB)
+   ---------------------------------------- 11.9/11.9 MB 3.7 MB/s  0:00:03
+Downloading lazy_loader-0.5-py3-none-any.whl (8.0 kB)
+Downloading tifffile-2026.3.3-py3-none-any.whl (243 kB)
+Building wheels for collected packages: lime
+  Building wheel for lime (pyproject.toml): started
+  Building wheel for lime (pyproject.toml): finished with status 'done'
+  Created wheel for lime: filename=lime-0.2.0.1-py3-none-any.whl size=283917 sha256=69bc173d6e1684af69d86af395ea38fb456182583571083b176bfedb9cbf52e3
+  Stored in directory: c:\users\admin\appdata\local\pip\cache\wheels\85\fa\a3\9c2d44c9f3cd77cf4e533b58900b2bf4487f2a17e8ec212a3d
+Successfully built lime
+Installing collected packages: tifffile, lazy-loader, scikit-image, lime
+
+Successfully installed lazy-loader-0.5 lime-0.2.0.1 scikit-image-0.26.0 tifffile-2026.3.3
