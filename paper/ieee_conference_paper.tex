@@ -9,7 +9,6 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
-\usepackage{animate}
 
 % Compile from the `paper/` directory so figures resolve via these paths.
 \graphicspath{{../evaluation/plots/}{../evaluation/plots/explain/}{../evaluation/plots/explain/prop_frames/}}
@@ -27,7 +26,7 @@ This manuscript is prepared in IEEE conference format and can be updated with fi
 \maketitle
 
 \begin{abstract}
-Network intrusion detection systems still struggle with two practical constraints: temporal behavior changes quickly, and operators need explanations they can trust. This work presents a temporal, explainable graph neural network (GNN) pipeline for real-time intrusion detection over dynamic flow graphs. We build snapshot graphs from CICIDS-style network flows, encode per-edge traffic features, and classify attack edges with a GAT-plus-LSTM model. To reduce evaluation optimism, preprocessing transforms are fitted on training data only and then frozen for validation and test. On the current project artifacts, our best upgraded temporal model reaches 0.904 F1 (recall 0.933, FAR 0.0319) at a detection-focused threshold, and 0.873 F1 (recall 0.841, FAR 0.0207) at a stricter low-false-alarm setting. We also report feature-level and attention-level explanations, plus replay-based real-time simulation, showing how the same model can be deployed in streaming mode with stable alert generation.
+Network intrusion detection systems still struggle with two practical constraints: temporal behavior changes quickly, and operators need explanations they can trust. This work presents a temporal, explainable graph neural network (GNN) pipeline for real-time intrusion detection over dynamic flow graphs. We build snapshot graphs from CICIDS-style network flows, encode per-edge traffic features, and classify attack edges with a GAT-plus-LSTM model. To reduce evaluation optimism, preprocessing transforms are fitted on training data only and then frozen for validation and test. The repository now couples this experimental pipeline with a realtime detector, a unified desktop GUI, and additional explainability hooks for analyst-facing inspection. On the current checked-in evaluation artifacts, the upgraded temporal model reaches 0.844 F1 (recall 0.846, FAR 0.0387) at its selected operating point, and 0.833 F1 (recall 0.775, FAR 0.0211) at a stricter calibrated threshold. We also report feature-level, attention-level, and simulation-based evidence showing how the same model can be carried into streaming inference with stable alert generation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -43,12 +42,12 @@ The main contributions are:
 \begin{itemize}
 \item A reproducible temporal graph-learning pipeline with explicit leakage guards (train-only fitting for edge transforms and scaling).
 \item A temporal edge-classification architecture combining graph attention and sequence modeling.
-\item A deployment-ready inference path that tails live CSV flow streams and emits snapshot-level attack alerts.
-\item Human-auditable explainability artifacts (feature permutation importance, attention traces, and gradient-based scores).
+\item A deployment-ready inference path that tails live CSV flow streams and emits snapshot-level attack alerts, plus a single-file GUI that orchestrates training and realtime monitoring.
+\item Human-auditable explainability artifacts, including permutation importance, attention traces, gradient-based plots, and SHAP/LIME integration hooks for tabular-style post hoc analysis.
 \end{itemize}
 
 \section{Related Work}
-Flow-based IDS research has moved from classical learners to deep sequence models and graph formulations. CICIDS2017-style benchmarks remain common for evaluating realistic attack diversity \cite{sharafaldin2018cicids}. Attention-based GNNs \cite{velickovic2018gat} are useful for heterogeneous connectivity patterns, while LSTMs \cite{hochreiter1997lstm} help capture temporal dependencies across windows. For imbalanced detection tasks, focal loss \cite{lin2017focal} is often used to focus learning on harder examples. Explainability in GNNs is an active area \cite{ying2019gnnexplainer}, especially for security use cases where operator trust is critical.
+Flow-based IDS research has moved from classical learners to deep sequence models and graph formulations. CICIDS2017-style benchmarks remain common for evaluating realistic attack diversity \cite{sharafaldin2018cicids}. Attention-based GNNs \cite{velickovic2018gat} are useful for heterogeneous connectivity patterns, while LSTMs \cite{hochreiter1997lstm} help capture temporal dependencies across windows. For imbalanced detection tasks, focal loss \cite{lin2017focal} is often used to focus learning on harder examples. Explainability in GNNs is an active area \cite{ying2019gnnexplainer}, and widely used post hoc tools such as LIME and SHAP remain relevant when security teams want local tabular explanations alongside graph-native evidence \cite{ribeiro2016lime,lundberg2017shap}.
 
 \section{Methodology}
 \subsection{Traffic-to-Graph Construction}
@@ -85,15 +84,21 @@ To preserve deployment realism, clipping, log-transform, and standardization par
 \subsection{Thresholding for Operating Modes}
 Rather than fixing threshold at 0.5, threshold is selected from validation behavior to control false alarm rate (FAR) while maximizing F1/recall trade-offs. This supports multiple operating points (detection-focused vs. conservative SOC mode).
 
+\subsection{Implementation and Deployment Surface}
+The codebase exposes the method through three operational surfaces. First, \texttt{training/run\_training.py} provides a reproducible CLI for preprocessing, splitting, training, baseline comparison, and artifact export. Second, \texttt{training/realtime\_detect.py} loads a saved deployment manifest, tails an appending CSV stream, and emits per-window alerts using a rolling temporal context. Third, \texttt{temporal\_gnn\_gui\_app.py} wraps both workflows in a single desktop interface with embedded configuration editing and live logs.
+
+\subsection{Explainability Support}
+The checked-in evaluation outputs include permutation importance, GAT attention summaries, and gradient-style attribution plots. In addition, the repository contains a separate \texttt{explainability/xia.py} module that exposes SHAP KernelExplainer and LIME Tabular Explainer adapters through a NumPy-compatible prediction interface, making it easier to run auxiliary post hoc explanations against compatible PyTorch models.
+
 \section{Experimental Setup}
 \subsection{Dataset and Scale}
 Experiments use CICIDS2017 day-wise CSV captures (Monday through Friday attack scenarios), including DDoS, PortScan, Web Attacks, and Infiltration traffic \cite{sharafaldin2018cicids}. Current project statistics show 1,559,907 flow rows in the processed dataset summary.
 
 \subsection{Training Configuration}
-Core settings from \texttt{config.yml} include 40 epochs, early stopping patience 8, learning rate $8\times10^{-4}$ (with upgraded rank configuration exploring $5\times10^{-4}$), dropout 0.2, hidden dimension 64, and snapshot chunk size 4 for temporal context.
+Core settings from \texttt{config.yml} include 40 epochs, early stopping patience 8, learning rate $8\times10^{-4}$, dropout 0.2, hidden dimension 64, and snapshot chunk size 4 for temporal context. The best checked-in upgraded configuration uses hidden dimension 64, one attention head in the rank-selected variant, LSTM hidden size 32, dropout 0.2, learning rate $5\times10^{-4}$, and weight decay $10^{-5}$.
 
 \subsection{Baselines and Metrics}
-Reported metrics include accuracy, precision, recall, F1, ROC-AUC, FAR, and detection rate (DR). The available model comparison artifact reports the upgraded temporal model against a stacked logistic meta-learner baseline.
+Reported metrics include accuracy, precision, recall, F1, ROC-AUC, FAR, and detection rate (DR). The reproducible training pipeline is designed to output temporal/non-temporal ablations plus Random Forest, Logistic Regression, and MLP baselines. However, the currently checked-in comparison artifact contains the latest upgraded temporal model and a stacked logistic meta-learner reference, so the quantitative discussion below is grounded in those present files.
 
 \section{Results and Discussion}
 \subsection{Primary Detection Performance}
@@ -103,12 +108,12 @@ Table~\ref{tab:modelcomp} shows that the upgraded temporal GNN outperforms the s
 \caption{Model Comparison (from \texttt{evaluation/model\_comparison.csv})}
 \label{tab:modelcomp}
 \centering
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-Model & Acc. & Prec. & Recall & F1 \\
+Model & Acc. & Prec. & Recall & F1 & FAR \\
 \midrule
-TemporalGNN\_Upgraded\_Rank1 & 0.9522 & 0.9080 & 0.8410 & 0.8732 \\
-StackedMetaLR & 0.9496 & 0.9066 & 0.8279 & 0.8655 \\
+TemporalGNN\_Upgraded\_Rank1 & 0.9391 & 0.8992 & 0.7754 & 0.8327 & 0.0211 \\
+StackedMetaLR & 0.9387 & 0.8975 & 0.7754 & 0.8320 & 0.0215 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -116,15 +121,15 @@ StackedMetaLR & 0.9496 & 0.9066 & 0.8279 & 0.8655 \\
 \subsection{Operating-Point Trade-off}
 Two operating points are particularly useful for deployment:
 \begin{itemize}
-\item \textbf{Detection-focused} (threshold 0.8): F1 0.9039, recall 0.9328, FAR 0.0319.
-\item \textbf{Conservative} (threshold 0.9): F1 0.8732, recall 0.8410, FAR 0.0207.
+\item \textbf{Selected operating point} (threshold 0.47): F1 0.8438, recall 0.8459, FAR 0.0387.
+\item \textbf{Conservative calibrated point} (threshold 0.66): F1 0.8327, recall 0.7754, FAR 0.0211.
 \end{itemize}
 This gives teams a practical way to tune sensitivity vs. alert fatigue.
 
-At the conservative operating point (threshold 0.9), the available confusion counts are TN=2456, FP=52, FN=97, and TP=513, which illustrates that FAR can be held low while still capturing a majority of attack edges.
+At the conservative operating point (threshold 0.66), the available confusion counts are TN=2455, FP=53, FN=137, and TP=473, which illustrates that FAR can be held low while still capturing a substantial fraction of attack edges.
 
 \subsection{Hyperparameter Search Signal}
-Large-grid HPO artifacts indicate the strongest validation F1 values are concentrated around hidden size 64 and single-head attention configurations, with recall frequently above 0.95 in top-ranked settings. This supports the final lightweight architecture choice.
+Large-grid HPO artifacts indicate the strongest validation F1 values are concentrated around hidden size 64 and single-head attention configurations, with the top recorded validation F1 at approximately 0.748 and validation recall above 0.95 in several leading settings. This supports the final lightweight architecture choice and suggests that a compact model can still recover strong temporal cues.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.95\columnwidth]{f1_model_comparison_updated.png}}
@@ -145,7 +150,7 @@ Permutation analysis ranks packet-length and packet-count features as the domina
 \subsection{Attention/Attribution Outputs}
 Saved attention traces and gradient attribution snapshots (\texttt{evaluation/explain/} and \texttt{evaluation/plots/explain/}) provide localized evidence about which edges and attributes influenced decisions. While these are not causal proofs, they are useful for analyst triage and sanity checks.
 
-Additional generated evaluation artifacts are included to help validate and inspect model behaviour. Figure~\ref{fig:rocpr} shows ROC and Precision-Recall curves for the final temporal model; Figure~\ref{fig:explain_examples} presents example attention and gradient-attribution visualizations for a detected snapshot. Full artifact sets (loss curves, confusion matrices, constructed graph visualizations, feature distributions, and additional explain plots) are available in the repository under \texttt{evaluation/plots/} and \texttt{evaluation/plots/explain/}.
+Additional generated evaluation artifacts are included to help validate and inspect model behaviour. Figure~\ref{fig:rocpr} shows ROC and Precision-Recall curves for the final temporal model; Figure~\ref{fig:explain_examples} presents example attention and gradient-attribution visualizations for a detected snapshot. Full artifact sets (loss curves, confusion matrices, constructed graph visualizations, feature distributions, and additional explain plots) are available in the repository under \texttt{evaluation/plots/} and \texttt{evaluation/plots/explain/}. The separate XIA helper module further broadens this layer by allowing SHAP- and LIME-style explanations when analysts want more familiar per-feature local narratives.
 
 \begin{figure}[htbp]
 \centering
@@ -157,8 +162,8 @@ Additional generated evaluation artifacts are included to help validate and insp
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.48\columnwidth]{explain/attention_snapshot_0.png}
-\includegraphics[width=0.48\columnwidth]{explain/grad_attr_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{attention_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{grad_attr_snapshot_0.png}
 \caption{Example explainability artifacts: attention heatmap (left) and gradient attribution overlay (right) for a high-confidence attack snapshot.}
 \label{fig:explain_examples}
 \end{figure}
@@ -190,7 +195,7 @@ Additional generated evaluation artifacts are included to help validate and insp
 \subsection{Realtime Simulation}
 Replay simulation across 144 snapshots produced 59 attack-flagged windows, with mean attack probability 0.492 and peak probability 0.9998. The resulting trajectory shows bursty high-confidence periods, which is typical for concentrated attack phases.
 
-In streaming mode, the detector tails an appending flow CSV, assigns new rows into the same fixed snapshot windows, applies the frozen deployment transforms, builds snapshot graphs, and runs inference using a small rolling temporal context buffer. Alerts are emitted per completed window as summary probabilities (mean/max) together with a binary decision based on the saved threshold.
+In streaming mode, the detector tails an appending flow CSV, assigns new rows into the same fixed snapshot windows, applies the frozen deployment transforms, builds snapshot graphs, and runs inference using a small rolling temporal context buffer. Alerts are emitted per completed window as summary probabilities (mean/max) together with a binary decision based on the saved threshold. This deployment path is also surfaced in the unified GUI, which reduces friction for demonstration, paper reproduction, and lightweight operator testing.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.95\columnwidth]{realtime_attack_probability.png}}
@@ -201,10 +206,10 @@ In streaming mode, the detector tails an appending flow CSV, assigns new rows in
 % "Additional evaluation artifacts" section removed per request.
 
 \section{Limitations and Threats to Validity}
-Current repository artifacts do not yet include complete multi-seed significance outputs for the latest upgraded model revision, so statistical claims should be interpreted as point estimates from available runs. In addition, deployment realism still depends on live schema stability (feature columns and timestamp quality) and on periodic recalibration under drift.
+The repository code supports richer outputs than are currently checked in; for example, the training CLI is designed to write ablation tables, seed-level metrics, significance reports, and deployment manifests, but those files are not all present in the current evaluation directory. As a result, some claims in this paper must stay grounded in the checked-in artifacts rather than the full intended reporting surface. In addition, deployment realism still depends on live schema stability (feature columns and timestamp quality), threshold recalibration under drift, and further validation with truly live network streams beyond replay simulation.
 
 \section{Conclusion}
-This project demonstrates a practical path from temporal graph learning to explainable near-real-time cyberattack detection. The upgraded TemporalGNN model delivers strong ROC-AUC and robust F1 under low FAR constraints, while explanation artifacts improve analyst transparency. Next steps include full multi-seed significance for the upgraded configuration, online drift monitoring, and closed-loop SOC feedback for threshold adaptation.
+This project demonstrates a practical path from temporal graph learning to explainable near-real-time cyberattack detection. The upgraded TemporalGNN model delivers strong ROC-AUC and competitive F1 under low-FAR constraints, while the surrounding tooling now covers reproducible training, streaming inference, analyst-facing explainability, simulation, and a GUI-based control surface. Immediate next steps include regenerating the full evaluation bundle from the reproducible CLI, expanding significance testing for the upgraded configuration, and adding drift-aware threshold maintenance for live deployment.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
