@@ -1,5 +1,11 @@
 # Temporal Explainable GNN for Real-Time Intrusion Detection
 
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-Temporal%20GNN-red)
+![XAI](https://img.shields.io/badge/XAI-SHAP%20%7C%20LIME-green)
+![Paper](https://img.shields.io/badge/IEEE-LaTeX%20Paper-lightgrey)
+![Status](https://img.shields.io/badge/Project-Research%20%2B%20Realtime-orange)
+
 This project builds an intrusion detection system that treats network traffic as a sequence of dynamic graphs instead of isolated tabular rows. The goal is not only to classify malicious traffic, but also to make the decisions easier to inspect and easier to carry into a near-real-time monitoring workflow.
 
 The repository combines four things in one place:
@@ -8,6 +14,65 @@ The repository combines four things in one place:
 - a temporal graph neural network for attack detection,
 - explainability utilities and saved XAI artifacts,
 - and a realtime detector with a desktop GUI for running the system end to end.
+
+## Project Snapshot
+
+This repository presents a temporal, explainable intrusion detection workflow over dynamic network graphs built from CICIDS-style traffic data. Instead of only reporting an offline machine-learning score, the project connects dataset preprocessing, graph construction, temporal GNN training, explanation generation, realtime-style inference, and paper writing in one unified codebase.
+
+It is designed for two audiences at the same time:
+
+- researchers who want a clearer and more reproducible graph-based IDS workflow,
+- and practitioners or students who want to see how a trained cyberattack detector can be moved toward live monitoring.
+
+## Workflow Overview
+
+![Methodology Diagram](paper/methodology-diagram.png)
+
+The end-to-end workflow is:
+
+1. ingest CICIDS-style CSV network-flow data
+2. clean and standardize the schema
+3. group flows into temporal windows
+4. build snapshot graphs from communicating endpoints
+5. train a temporal GNN for edge-level attack detection
+6. compare against baselines and choose an operating threshold
+7. generate explainability artifacts
+8. export deployment metadata for realtime inference
+9. run the detector on an appending CSV stream or through the GUI
+
+## Results At A Glance
+
+The repository already includes saved evaluation artifacts from the upgraded temporal model.
+
+### Checked-in operating points
+
+| Operating mode | Threshold | Accuracy | Precision | Recall | F1 | FAR |
+|---|---:|---:|---:|---:|---:|---:|
+| Selected deployment-friendly point | 0.47 | 0.9387 | 0.8418 | 0.8459 | 0.8438 | 0.0387 |
+| Conservative low-FAR point | 0.66 | 0.9391 | 0.8992 | 0.7754 | 0.8327 | 0.0211 |
+
+### Model comparison from saved artifact
+
+| Model | Accuracy | Precision | Recall | F1 | FAR |
+|---|---:|---:|---:|---:|---:|
+| TemporalGNN_Upgraded_Rank1 | 0.9391 | 0.8992 | 0.7754 | 0.8327 | 0.0211 |
+| StackedMetaLR | 0.9387 | 0.8975 | 0.7754 | 0.8320 | 0.0215 |
+
+These numbers are taken from the checked-in evaluation files:
+
+- `evaluation/model_comparison.csv`
+- `evaluation/temporal_gnn_upgraded_rank1_metrics.json`
+- `evaluation/temporal_gnn_upgraded_rank1_calibrated_metrics.json`
+
+### Example repository artifacts
+
+| ROC / PR Curves | Explainability Samples |
+|---|---|
+| ![ROC and PR](evaluation/plots/roc_temporal_gnn.png) | ![SHAP Summary](evaluation/plots/explain/shap_summary.png) |
+
+| Training Diagnostics | Realtime Simulation |
+|---|---|
+| ![Loss Curve](evaluation/plots/loss_curve_temporal_gnn.png) | ![Realtime Attack Probability](evaluation/plots/realtime_attack_probability.png) |
 
 ## What This Project Is Aimed For
 
