@@ -18,9 +18,12 @@
 \title{Temporal Explainable GNN for Real-Time Intrusion Detection on Dynamic Network Graphs}
 
 \author{%
-\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockN{Md. Sadik Mahmud Adive, Anik Kumar Bosu, Sabrina Sonda Snaha, Mehrin Mehjabin Pretti}
 \IEEEauthorblockA{%
-This manuscript is prepared in IEEE conference format and can be updated with final author metadata before submission.}
+Department of Computer Science and Engineering\\
+Bangladesh University of Business and Technology\\
+Dhaka, Bangladesh\\
+\textit{Emails to be added before final submission}}
 }
 
 \maketitle
@@ -36,7 +39,7 @@ intrusion detection, graph neural network, temporal modeling, explainable AI, cy
 \section{Introduction}
 Modern enterprise networks generate high-volume, high-velocity traffic where attack patterns evolve over time. Static classifiers over independent flows often miss these dynamics or produce brittle decisions under distribution shift. At the same time, operations teams need transparent alerts, not only scores.
 
-This project addresses both issues by modeling traffic as temporal graph snapshots and adding explanation outputs during evaluation. The design objective is practical: one reproducible pipeline for training, offline evaluation, and near-real-time streaming inference.
+This project addresses both issues by modeling traffic as temporal graph snapshots and adding explanation outputs during evaluation. The design objective is practical: one reproducible pipeline for training, offline evaluation, notebook-based research iteration, and near-real-time streaming inference.
 
 The main contributions are:
 \begin{itemize}
@@ -76,7 +79,9 @@ Edge representations concatenate source/destination node embeddings with edge at
 \end{equation}
 Final edge logits combine per-edge hidden states with time-aligned context states, then apply sigmoid for probabilities. Training uses focal BCE with class weighting to handle imbalance.
 
-In our implementation, the backbone uses two GAT layers (first with multi-head attention, second with a single head), followed by an edge MLP. The temporal module runs an LSTM over the per-snapshot mean edge embedding (graph context), and each edge is classified using the concatenation of its edge embedding and the corresponding temporal context state.
+In the reproducible CLI pipeline, the backbone uses two GAT layers (first with multi-head attention, second with a single head), followed by an edge MLP. The temporal module runs an LSTM over the per-snapshot mean edge embedding (graph context), and each edge is classified using the concatenation of its edge embedding and the corresponding temporal context state.
+
+The notebook adds an upgraded experimental variant, \texttt{TemporalEdgeGNN\_TemporalAttention}, that performs temporal attention over per-edge hidden sequences before LSTM aggregation. In that design, each edge combines a symmetric node-pair encoding with a learned edge encoder, receives attention weights across the snapshot sequence, and is then classified from the final temporal state. The upgraded checkpoint and the checked-in headline metrics are associated with this notebook-driven variant.
 
 \subsection{Leakage Guard and Split Policy}
 To preserve deployment realism, clipping, log-transform, and standardization parameters are fitted only on the training split and reused unchanged for validation/test. Specifically, each edge feature is clipped to the 0.1\% and 99.9\% quantiles of the training split, transformed by $\log(1+x)$ (sign-aware for negative values), and finally standardized using a training-fitted scaler. The default split policy is \texttt{per\_day\_temporal} (70/15/15), with snapshot IDs disjoint across train/validation/test.
@@ -85,10 +90,12 @@ To preserve deployment realism, clipping, log-transform, and standardization par
 Rather than fixing threshold at 0.5, threshold is selected from validation behavior to control false alarm rate (FAR) while maximizing F1/recall trade-offs. This supports multiple operating points (detection-focused vs. conservative SOC mode).
 
 \subsection{Implementation and Deployment Surface}
-The codebase exposes the method through three operational surfaces. First, \texttt{training/run\_training.py} provides a reproducible CLI for preprocessing, splitting, training, baseline comparison, and artifact export. Second, \texttt{training/realtime\_detect.py} loads a saved deployment manifest, tails an appending CSV stream, and emits per-window alerts using a rolling temporal context. Third, \texttt{temporal\_gnn\_gui\_app.py} wraps both workflows in a single desktop interface with embedded configuration editing and live logs.
+The codebase exposes the method through four operational surfaces. First, \texttt{training/run\_training.py} provides a reproducible CLI for preprocessing, splitting, training, baseline comparison, and artifact export. Second, \texttt{training/realtime\_detect.py} loads a saved deployment manifest, tails an appending CSV stream, and emits per-window alerts using a rolling temporal context. Third, \texttt{temporal\_gnn\_gui\_app.py} wraps both workflows in a single desktop interface with embedded configuration editing and live logs. Fourth, \texttt{notebooks/main\_pipeline.ipynb} serves as the research notebook where the upgraded temporal-attention model, calibration flow, and extended XAI visualizations are explored.
 
 \subsection{Explainability Support}
 The checked-in evaluation outputs include permutation importance, GAT attention summaries, and gradient-style attribution plots. In addition, the repository contains a separate \texttt{explainability/xia.py} module that exposes SHAP KernelExplainer and LIME Tabular Explainer adapters through a NumPy-compatible prediction interface, making it easier to run auxiliary post hoc explanations against compatible PyTorch models.
+
+The notebook extends this layer with explicit XAI cells that patch the repository root into \texttt{sys.path}, run SHAP KernelExplainer and LIME through the helper module, render SHAP summary and dependence views, and save notebook-generated explanation figures such as \texttt{shap\_summary.png} and \texttt{lime\_instance\_0.png} under \texttt{evaluation/plots/explain/}. This gives the project both graph-native explanations and more familiar feature-attribution views inside the same workflow.
 
 \section{Experimental Setup}
 \subsection{Dataset and Scale}
@@ -147,10 +154,10 @@ Permutation analysis ranks packet-length and packet-count features as the domina
 \label{fig:perm}
 \end{figure}
 
-\subsection{Attention/Attribution Outputs}
+\subsection{Attention, Gradient, and Post Hoc XAI Outputs}
 Saved attention traces and gradient attribution snapshots (\texttt{evaluation/explain/} and \texttt{evaluation/plots/explain/}) provide localized evidence about which edges and attributes influenced decisions. While these are not causal proofs, they are useful for analyst triage and sanity checks.
 
-Additional generated evaluation artifacts are included to help validate and inspect model behaviour. Figure~\ref{fig:rocpr} shows ROC and Precision-Recall curves for the final temporal model; Figure~\ref{fig:explain_examples} presents example attention and gradient-attribution visualizations for a detected snapshot. Full artifact sets (loss curves, confusion matrices, constructed graph visualizations, feature distributions, and additional explain plots) are available in the repository under \texttt{evaluation/plots/} and \texttt{evaluation/plots/explain/}. The separate XIA helper module further broadens this layer by allowing SHAP- and LIME-style explanations when analysts want more familiar per-feature local narratives.
+Additional generated evaluation artifacts are included to help validate and inspect model behaviour. Figure~\ref{fig:rocpr} shows ROC and Precision-Recall curves for the final temporal model; Figure~\ref{fig:explain_examples} presents example attention and gradient-attribution visualizations for a detected snapshot. Full artifact sets (loss curves, confusion matrices, constructed graph visualizations, feature distributions, and additional explain plots) are available in the repository under \texttt{evaluation/plots/} and \texttt{evaluation/plots/explain/}. The notebook-specific XAI flow broadens this layer further by generating saved SHAP and LIME visualizations, giving the project a bridge between graph-centric explanation and tabular-style interpretability.
 
 \begin{figure}[htbp]
 \centering
@@ -162,10 +169,18 @@ Additional generated evaluation artifacts are included to help validate and insp
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.48\columnwidth]{attention_snapshot_0.png}
-\includegraphics[width=0.48\columnwidth]{grad_attr_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{explain/attention_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{explain/grad_attr_snapshot_0.png}
 \caption{Example explainability artifacts: attention heatmap (left) and gradient attribution overlay (right) for a high-confidence attack snapshot.}
 \label{fig:explain_examples}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\columnwidth]{explain/shap_summary.png}
+\includegraphics[width=0.48\columnwidth]{explain/lime_instance_0.png}
+\caption{Post-hoc tabular explanations: SHAP summary (left) and LIME local explanation (right). These figures are generated by the repository's XIA helpers and are saved under \texttt{evaluation/plots/explain/}.}
+\label{fig:shap_lime}
 \end{figure}
 
 \begin{figure}[htbp]
@@ -178,10 +193,10 @@ Additional generated evaluation artifacts are included to help validate and insp
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.32\columnwidth]{constructed_graph_snapshot.png}
 \includegraphics[width=0.32\columnwidth]{constructed_graph_weighted.png}
+\includegraphics[width=0.32\columnwidth]{constructed_graph_temporal_transitions.png}
 \includegraphics[width=0.32\columnwidth]{constructed_graph_degree_distribution.png}
-\caption{Constructed graph examples: snapshot view (left), weighted edge view (center), and degree distribution (right).}
+\caption{Constructed graph examples: weighted edge view (left), temporal transition overview (center), and degree distribution (right).}
 \label{fig:constructed_graphs}
 \end{figure}
 
@@ -203,10 +218,25 @@ In streaming mode, the detector tails an appending flow CSV, assigns new rows in
 \label{fig:realtime}
 \end{figure}
 
+% Additional evaluation figures (panels)
+\begin{figure*}[htbp]
+\centering
+\begin{tabular}{ccc}
+\includegraphics[width=0.32\textwidth]{f1_model_comparison_updated.png} &
+\includegraphics[width=0.32\textwidth]{permutation_feature_importance.png} &
+\includegraphics[width=0.32\textwidth]{gat_attention_top_edges.png} \\
+\includegraphics[width=0.32\textwidth]{edge_feature_distributions.png} &
+\includegraphics[width=0.32\textwidth]{edge_feature_correlation.png} &
+\includegraphics[width=0.32\textwidth]{accuracy_vs_loss_temporal_gnn.png} \\
+\end{tabular}
+\caption{Additional evaluation artifacts: model comparison, permutation importance, top attention edges, feature distributions, feature correlations, and accuracy/loss overview.}
+\label{fig:more_evals}
+\end{figure*}
+
 % "Additional evaluation artifacts" section removed per request.
 
 \section{Limitations and Threats to Validity}
-The repository code supports richer outputs than are currently checked in; for example, the training CLI is designed to write ablation tables, seed-level metrics, significance reports, and deployment manifests, but those files are not all present in the current evaluation directory. As a result, some claims in this paper must stay grounded in the checked-in artifacts rather than the full intended reporting surface. In addition, deployment realism still depends on live schema stability (feature columns and timestamp quality), threshold recalibration under drift, and further validation with truly live network streams beyond replay simulation.
+The repository currently contains two partially overlapping experimental surfaces: a reproducible CLI pipeline and a richer notebook workflow with the upgraded temporal-attention model and extended XAI cells. That makes the project stronger as a research artifact, but it also means readers should distinguish carefully between baseline script behaviour and notebook-specific experimental extensions. Some outputs supported by code are also not all checked in for the latest run configuration, so several claims in this paper must stay grounded in the artifacts currently present in \texttt{evaluation/}. Deployment realism still depends on live schema stability (feature columns and timestamp quality), threshold recalibration under drift, and further validation with truly live network streams beyond replay simulation.
 
 \section{Conclusion}
 This project demonstrates a practical path from temporal graph learning to explainable near-real-time cyberattack detection. The upgraded TemporalGNN model delivers strong ROC-AUC and competitive F1 under low-FAR constraints, while the surrounding tooling now covers reproducible training, streaming inference, analyst-facing explainability, simulation, and a GUI-based control surface. Immediate next steps include regenerating the full evaluation bundle from the reproducible CLI, expanding significance testing for the upgraded configuration, and adding drift-aware threshold maintenance for live deployment.
