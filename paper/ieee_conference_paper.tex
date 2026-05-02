@@ -22,8 +22,7 @@
 \IEEEauthorblockA{%
 Department of Computer Science and Engineering\\
 Bangladesh University of Business and Technology\\
-Dhaka, Bangladesh\\
-\textit{Emails to be added before final submission}}
+Dhaka, Bangladesh\\}
 }
 
 \maketitle
@@ -40,6 +39,10 @@ intrusion detection, graph neural network, temporal modeling, explainable AI, cy
 Modern enterprise networks generate high-volume, high-velocity traffic where attack patterns evolve over time. Static classifiers over independent flows often miss these dynamics or produce brittle decisions under distribution shift. At the same time, operations teams need transparent alerts, not only scores.
 
 This project addresses both issues by modeling traffic as temporal graph snapshots and adding explanation outputs during evaluation. The design objective is practical: one reproducible pipeline for training, offline evaluation, notebook-based research iteration, and near-real-time streaming inference.
+
+The motivation for this work comes from a gap between academic IDS reporting and operational use. Many studies report strong classification results on benchmark data, yet provide only limited discussion of how preprocessing choices, temporal splits, threshold selection, and explanation outputs would behave in a deployment-style setting. In practice, however, each of these choices matters. A model that performs well only under random splitting or under fixed thresholds may create overly optimistic conclusions. Likewise, a model that cannot expose why a window was flagged is harder to trust in a security workflow.
+
+For that reason, this paper treats the learning model and the surrounding experimental pipeline as one integrated contribution. The project is not only about achieving a competitive F1 score; it is also about preserving temporal realism, reducing leakage risk, exporting deployment artifacts, and producing explanation views that an analyst can inspect after an alert. This broader framing is especially important in cybersecurity, where the path from notebook result to usable system is often where many promising models break down.
 
 The main contributions are:
 \begin{itemize}
@@ -77,6 +80,10 @@ Binary labels follow benign vs. attack semantics from the original flow label fi
 
 To represent nodes, we compute lightweight structural and traffic summaries inside each snapshot: mean outgoing and incoming edge-feature vectors per endpoint, plus a normalized log connection-count feature. This yields node features that help the model distinguish ``busy'' servers, scans, and bursty communication patterns without requiring payload inspection.
 
+This graph construction step is central to the project because it changes the representation from isolated flows to interaction structure. Instead of treating every record as an unrelated tabular row, the model can observe which endpoints communicate repeatedly, which nodes become hubs, and which communication patterns intensify within a time window. In attack scenarios such as scanning, flooding, or infiltration, these structural changes are often more informative than any single feature value alone.
+
+The repository also includes fallback logic for dataset variants that do not expose the same endpoint or timestamp columns. When source/destination IP fields are unavailable, the pipeline attempts to recover endpoints from flow identifiers or, if necessary, constructs synthetic endpoint identities from destination-port information. When timestamps are missing, a synthetic timeline can be reconstructed from cumulative flow duration. These fallbacks do not replace high-quality native metadata, but they make the workflow more robust across imperfect CICIDS-style CSV releases.
+
 \subsection{Temporal Explainable GNN}
 Given snapshot sequence $\{\mathcal{G}_t\}_{t=1}^{T}$, node embeddings are computed by stacked graph attention layers:
 \begin{equation}
@@ -98,6 +105,8 @@ To preserve deployment realism, clipping, log-transform, and standardization par
 \subsection{Thresholding for Operating Modes}
 Rather than fixing threshold at 0.5, threshold is selected from validation behavior to control false alarm rate (FAR) while maximizing F1/recall trade-offs. This supports multiple operating points (detection-focused vs. conservative SOC mode).
 
+This threshold-selection strategy matters because intrusion detection is rarely evaluated under a single universal operating point in practice. A research-oriented setting may prefer higher recall, while a security operations setting may be more sensitive to alert volume and false alarms. By reporting both a selected threshold and a stricter calibrated threshold, the project demonstrates that the same model can be tuned for different operational preferences without retraining the full architecture.
+
 \subsection{Implementation and Deployment Surface}
 The codebase exposes the method through four operational surfaces. First, \texttt{training/run\_training.py} provides a reproducible CLI for preprocessing, splitting, training, baseline comparison, and artifact export. Second, \texttt{training/realtime\_detect.py} loads a saved deployment manifest, tails an appending CSV stream, and emits per-window alerts using a rolling temporal context. Third, \texttt{temporal\_gnn\_gui\_app.py} wraps both workflows in a single desktop interface with embedded configuration editing and live logs. Fourth, \texttt{notebooks/main\_pipeline.ipynb} serves as the research notebook where the upgraded temporal-attention model, calibration flow, and extended XAI visualizations are explored.
 
@@ -113,6 +122,8 @@ Experiments use CICIDS2017 day-wise CSV captures (Monday through Friday attack s
 \subsection{Training Configuration}
 Core settings from \texttt{config.yml} include 40 epochs, early stopping patience 8, learning rate $8\times10^{-4}$, dropout 0.2, hidden dimension 64, and snapshot chunk size 4 for temporal context. The best checked-in upgraded configuration uses hidden dimension 64, one attention head in the rank-selected variant, LSTM hidden size 32, dropout 0.2, learning rate $5\times10^{-4}$, and weight decay $10^{-5}$.
 
+The choice of a relatively compact hidden size is intentional. In graph-based IDS tasks, a larger parameter budget does not always translate into better generalization, especially when snapshot density and attack frequency vary across time. The project therefore favors a model that is expressive enough to capture structural and temporal signals, but still small enough to train reproducibly and to remain plausible for realtime inference workloads.
+
 \subsection{Baselines and Metrics}
 Reported metrics include accuracy, precision, recall, F1, ROC-AUC, FAR, and detection rate (DR). The reproducible training pipeline is designed to output temporal/non-temporal ablations plus Random Forest, Logistic Regression, and MLP baselines. However, the currently checked-in comparison artifact contains the latest upgraded temporal model and a stacked logistic meta-learner reference, so the quantitative discussion below is grounded in those present files.
 
@@ -120,10 +131,15 @@ Reported metrics include accuracy, precision, recall, F1, ROC-AUC, FAR, and dete
 \subsection{Primary Detection Performance}
 Table~\ref{tab:modelcomp} shows that the upgraded temporal GNN outperforms the stacked baseline on F1 and recall while maintaining very low FAR.
 
+Although the absolute gap over the stacked meta-learner is modest in the checked-in artifact, the result is still meaningful. The temporal model preserves a slight edge while also offering a more direct route to graph-native explanations and stream-oriented deployment. In other words, the value of the temporal GNN in this repository is not only its score advantage, but also the fact that its architecture aligns naturally with the project's explainability and realtime objectives.
+
 \begin{table}[htbp]
 \caption{Model Comparison (from \texttt{evaluation/model\_comparison.csv})}
 \label{tab:modelcomp}
 \centering
+\setlength{\tabcolsep}{3pt}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
 Model & Acc. & Prec. & Recall & F1 & FAR \\
@@ -132,6 +148,7 @@ TemporalGNN\_Upgraded\_Rank1 & 0.9391 & 0.8992 & 0.7754 & 0.8327 & 0.0211 \\
 StackedMetaLR & 0.9387 & 0.8975 & 0.7754 & 0.8320 & 0.0215 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \subsection{Operating-Point Trade-off}
@@ -146,6 +163,8 @@ At the conservative operating point (threshold 0.66), the available confusion co
 
 \subsection{Hyperparameter Search Signal}
 Large-grid HPO artifacts indicate the strongest validation F1 values are concentrated around hidden size 64 and single-head attention configurations, with the top recorded validation F1 at approximately 0.748 and validation recall above 0.95 in several leading settings. This supports the final lightweight architecture choice and suggests that a compact model can still recover strong temporal cues.
+
+This pattern is useful beyond simple model selection. It suggests that, for this dataset and representation, temporal signal quality may be more important than architectural width. In several trials, strong recall appears before the largest candidate models are considered necessary, indicating that careful windowing, leakage-aware preprocessing, and threshold selection may contribute as much to final behavior as raw parameter scale.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.95\columnwidth]{f1_model_comparison_updated.png}}
@@ -178,16 +197,16 @@ Additional generated evaluation artifacts are included to help validate and insp
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.48\columnwidth]{attention_snapshot_0.png}
-\includegraphics[width=0.48\columnwidth]{grad_attr_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{explain/attention_snapshot_0.png}
+\includegraphics[width=0.48\columnwidth]{explain/grad_attr_snapshot_0.png}
 \caption{Example explainability artifacts: attention heatmap (left) and gradient attribution overlay (right) for a high-confidence attack snapshot.}
 \label{fig:explain_examples}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.48\columnwidth]{shap_summary.png}
-\includegraphics[width=0.48\columnwidth]{lime_instance_0.png}
+\includegraphics[width=0.48\columnwidth]{explain/shap_summary.png}
+\includegraphics[width=0.48\columnwidth]{explain/lime_instance_0.png}
 \caption{Post-hoc tabular explanations: SHAP summary (left) and LIME local explanation (right). These figures are generated by the repository's XIA helpers and are saved under \texttt{evaluation/plots/explain/}.}
 \label{fig:shap_lime}
 \end{figure}
@@ -221,6 +240,8 @@ Replay simulation across 144 snapshots produced 59 attack-flagged windows, with 
 
 In streaming mode, the detector tails an appending flow CSV, assigns new rows into the same fixed snapshot windows, applies the frozen deployment transforms, builds snapshot graphs, and runs inference using a small rolling temporal context buffer. Alerts are emitted per completed window as summary probabilities (mean/max) together with a binary decision based on the saved threshold. This deployment path is also surfaced in the unified GUI, which reduces friction for demonstration, paper reproduction, and lightweight operator testing.
 
+Even though this replay experiment is not identical to a production network feed, it serves as an important bridge between offline evaluation and deployment reasoning. It shows that the trained model can operate over incrementally arriving records, preserve its preprocessing assumptions through exported deployment metadata, and emit structured alert outputs without depending on notebook-only state. That property makes the project more convincing as a systems contribution, not merely a benchmark exercise.
+
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.95\columnwidth]{realtime_attack_probability.png}}
 \caption{Snapshot-level attack probability during realtime simulation replay.}
@@ -249,6 +270,13 @@ The repository currently contains two partially overlapping experimental surface
 
 \section{Conclusion}
 This project demonstrates a practical path from temporal graph learning to explainable near-real-time cyberattack detection. The upgraded TemporalGNN model delivers strong ROC-AUC and competitive F1 under low-FAR constraints, while the surrounding tooling now covers reproducible training, streaming inference, analyst-facing explainability, simulation, and a GUI-based control surface. Immediate next steps include regenerating the full evaluation bundle from the reproducible CLI, expanding significance testing for the upgraded configuration, and adding drift-aware threshold maintenance for live deployment.
+
+More broadly, the project shows how graph learning can be presented in a form that is easier to inspect, reproduce, and evolve. By combining dynamic graph modeling with multiple explanation modes and explicit deployment artifacts, the repository moves closer to the kind of end-to-end research package that is useful for both publication and iterative engineering. That balance between measurable performance and operational clarity is one of the main strengths of the work.\\
+\\
+\\
+\\
+\\
+\\
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
